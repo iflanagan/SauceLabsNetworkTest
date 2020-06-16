@@ -1,0 +1,23 @@
+Steps to execute (this only works on mac/linux)
+
+Download file 
+
+Open a terminal window and change directory to where the file is located
+
+Set permissions to execute the script so run 
+
+chmod 755 networkTest 
+
+To run the script run this command
+
+ ./networkConnectivyTest 
+
+If you need to add a proxy here is the syntax 
+
+ ./networkTest <proxyhost> <proxyport>
+
+Finally there should be a file called 'output.log' created in the same
+directory please send that back to your support person or SE so they can 
+look at the results.
+
+ 
