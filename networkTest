@@ -1,0 +1,253 @@
+#!/bin/bash 
+
+# Author: Ian Flanagan SauceLabs 2020
+# Script will perform a series of tests and redirect various parts to an outpufil file 
+# called output.log
+
+# steps to execute (this only works on mac/linux)
+# 1. download file 2.) set permissions chmod 755 networkConnectivyTest 3.) run it ./networkConnectivyTest 4.) you 
+# can add a proxy host:port by doing this: ./networkTest <proxyhost> <proxyport>
+
+# Define Variables here 
+
+mySLcomRestStatusURL=https://saucelabs.com/rest/v1/info/status
+myonDemandURL=https://ondemand.saucelabs.com:443/wd/hub/status
+mySLURL=saucelabs.com
+myoutputfile=output.log
+delay=2
+mydownloadspeedFile=downloadspeedFile
+myuploadspeedFile=uploadspeedFile
+proxyhost=$1
+proxyport=$2
+
+# Define Functions here 
+
+function filecheck
+ {
+
+  clear
+
+  if [ -e $mydownloadspeedFile ]; then
+
+        echo "The File: $mydownloadspeedFile  exists. lets delete it"
+        rm -rf $mydownloadspeedFile
+ 
+  else 
+      #  echo "The file: $mydownloadspeedFile  doesnt exist."
+      echo ""
+
+  fi
+
+  if [ -e $myuploadspeedFile ]; then
+
+        echo "The File: $myuploadspeedFile  exists. lets delete it"
+        rm -rf $myuploadspeedFile
+ 
+  else 
+      #  echo "The file: $myuploadspeedFile  doesnt exist."
+      echo ""
+
+  fi
+
+  if [ -e $myoutputfile ]; then
+
+        echo "The File: $myoutputfile  exists. lets delete it"
+        rm -rf $myoutputfile
+ 
+  else 
+      #  echo "The file: $myoutputfile  doesnt exist."
+      echo ""
+
+  fi
+
+}
+
+function checkUploadDownloadSpeed()
+{
+
+  mytime=$(date | awk '{ print $2, $3, $4, $5, $6 }') >> $myoutputfile
+  mymachine=$(hostname)
+  echo "##################################" >> $myoutputfile
+  echo "Running test on host:" $mymachine " Date/Time:" $mytime >> $myoutputfile
+  echo "Starting Network speed test now!" >> $myoutputfile
+  echo "##################################" >> $myoutputfile
+
+  if(npm -v) && (node -v); then
+      echo "node and npm are installed"
+
+         if (npm ls -g | grep fast); then
+              clear
+              echo "Fast is already installed."
+         else
+              clear
+              echo "install fast network tester now"
+              npm install --global fast-cli
+        fi 
+  else 
+      echo "node and npm are not installed lets install them"
+
+      if (brew -v); then
+        clear
+        echo "brew is installed"
+      else
+        clear
+        echo "brew is not installed, lets install it"
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+       brew install node
+       brew install npm   
+       npm install --global fast-cli
+     fi
+
+   fi 
+
+   #mydownloadspeedFile=downloadspeedFile
+   #myuploadspeedFile=uploadspeedFile
+
+   clear
+   echo "Performing download Speed Test now"
+   sleep $delay
+   fast | tee $mydownloadspeedFile
+   mydownloadspeed=$(cat $mydownloadspeedFile)
+   echo "Download speed is: " $mydownloadspeed >> $myoutputfile
+   echo "##################################" >> $myoutputfile
+
+   echo "Performing upload Speed Test now"
+   sleep $delay
+   mytime=$(date | awk '{ print $4 }') >> $myoutputfile
+   fast -u | tail -1 | tee $myuploadspeedFile
+   mytime=$(date | awk '{ print $4 }') >> $myoutputfile
+   myuploadspeed=$(cat $myuploadspeedFile)
+   echo "Upload speed is: " $myuploadspeed >> $myoutputfile
+   echo "##################################" >> $myoutputfile
+
+}
+
+function SaucenetworkConnectivyTest 
+{
+
+echo "Starting network connectivity test to SauceLabs"
+echo "Starting network connectivity test to SauceLabs" >> $myoutputfile
+echo "##################################" >> $myoutputfile
+
+if [ -n "$1" ] && [ -n "$2" ]; then
+
+    echo "Proxy host:" $1 " and port: " $2 "were sent via command line" 
+    
+      echo "Performing curl test on: " $myonDemandURL
+      echo ""
+      if (curl -v $1:$2 $myonDemandURL); then 
+
+        echo "We can curl ondemand.saucelabs.com:443 using proxyhost:" $1 " and port: " $2 >> $myoutputfile
+        echo "##################################" >> $myoutputfile
+
+      else
+        echo "We can't curl ondemand.saucelabs.com:443 using proxyhost:" $1 " and port: " $2 >> $myoutputfile
+        echo "##################################" >> $myoutputfile
+
+      fi  
+
+      echo "Validating 443 network connectivity to saucelabs.com:443"
+      echo ""
+      if nc -zw1 saucelabs.com 443; then
+       echo ""
+       echo "we have connectivity to https 443" >> $myoutputfile
+       echo "##################################" >> $myoutputfile
+    else 
+       echo "we don't have connectivity to https 443" >> $myoutputfile  
+       echo "##################################" >> $myoutputfile 
+    fi
+
+    echo "Start Ping test now...."
+    ping -q -c5 $mySLURL > /dev/null    
+    if [ $? -eq 0 ]; then
+
+      echo ""
+      echo "Able to ping: " $mySLURL >> $myoutputfile 
+      echo "##################################" >> $myoutputfile
+    else 
+      echo "Unable to ping: "  $mySLURL >> $myoutputfile
+      echo "##################################" >> $myoutputfile
+    fi
+
+else
+  
+  echo "No Proxy host:port provided" >> $myoutputfile
+  echo "##################################" >> $myoutputfile
+
+  echo "Performing curl test on: " $myonDemandURL
+  echo ""
+  if (curl -v $myonDemandURL); then 
+     echo "We can curl ondemand.saucelabs.com:443" >> $myoutputfile
+     echo "##################################" >> $myoutputfile
+  else 
+    echo "We can't curl ondemand.saucelabs.com:443" >> $myoutputfile
+    echo "##################################" >> $myoutputfile
+        
+  fi
+
+  echo "Performing curl test on: " $mySLcomRestStatusURL
+  echo ""
+  if (curl -v $mySLcomRestStatusURL); then
+     echo "" 
+     echo "We Can curl saucelabs.com" >> $myoutputfile
+     echo "##################################" >> $myoutputfile
+  else 
+    echo "We can't curl saucelabs.com" >> $myoutputfile
+     echo "##################################" >> $myoutputfile
+        
+  fi 
+
+  echo "Validating 443 network connectivity to saucelabs.com:443"
+  echo ""
+  if nc -zw1 saucelabs.com 443; then
+     
+     echo "we have connectivity to https 443" >> $myoutputfile
+     echo "##################################" >> $myoutputfile
+  else 
+    echo "we dont have connectivity to https 443" >> $myoutputfile
+    echo "##################################" >> $myoutputfile    
+             
+  fi
+
+    echo "Start Ping test now...."
+    ping -q -c5 $mySLURL > /dev/null    
+    if [ $? -eq 0 ]; then
+
+      echo ""
+      echo "Able to ping: " $mySLURL >> $myoutputfile 
+      echo "##################################" >> $myoutputfile
+    else 
+      echo ""
+      echo "Unable to ping: "  $mySLURL >> $myoutputfile
+      echo "##################################" >> $myoutputfile
+    fi
+
+fi  
+
+echo "Sauce Labs network Test Complete."
+echo ""
+
+}   
+
+function cleanUp()
+
+{
+
+  npm uninstall node
+  npm uninstall npm
+  ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/uninstall)"
+
+}
+
+function Main
+{
+
+filecheck
+checkUploadDownloadSpeed
+SaucenetworkConnectivyTest
+#cleanUp
+
+}
+
+Main
+
