@@ -100,9 +100,6 @@ function checkUploadDownloadSpeed()
 
    fi 
 
-   #mydownloadspeedFile=downloadspeedFile
-   #myuploadspeedFile=uploadspeedFile
-
    clear
    echo "Performing download Speed Test now"
    sleep $delay
